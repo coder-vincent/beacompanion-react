@@ -1,29 +1,18 @@
 import { Sequelize } from "sequelize";
 import "dotenv/config";
 
-// If explicit dialect is set to sqlite or if running in CI/Local env without MySQL,
-// gracefully fall back to an in-file SQLite database. This allows the server to
-// boot without external infrastructure, which is handy for automated tests.
-
-const useSQLite =
-  process.env.DB_DIALECT === "sqlite" ||
-  (!process.env.DB_HOST && process.env.NODE_ENV !== "production");
+// Prefer MySQL when a host is explicitly provided. Otherwise, default to SQLite.
+// This prevents crashes in production platforms (e.g. Render) where no MySQL
+// service is provisioned but NODE_ENV is automatically set to "production".
+const useSQLite = process.env.DB_DIALECT === "sqlite" || !process.env.DB_HOST;
 
 const sequelize = useSQLite
-  ? new Sequelize({
-      dialect: "sqlite",
-      storage: process.env.SQLITE_FILE || "dev.db.sqlite",
-      logging: false,
-    })
+  ? new Sequelize({ dialect: "sqlite", storage: "dev.db.sqlite" })
   : new Sequelize(
       process.env.DB_DATABASE || "beacompanion",
       process.env.DB_USER || "root",
       process.env.DB_PASS || "",
-      {
-        host: process.env.DB_HOST || "localhost",
-        dialect: "mysql",
-        logging: false, // Disable SQL logging in production
-      }
+      { host: process.env.DB_HOST || "localhost", dialect: "mysql" }
     );
 
 const connectDB = async () => {

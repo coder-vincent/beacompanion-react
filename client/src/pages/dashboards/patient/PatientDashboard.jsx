@@ -76,52 +76,6 @@ const PatientDashboard = () => {
   // Skip counting on very first analysis run to establish baseline
   const isFirstAnalysisRef = useRef(true);
 
-  // ---------------- Speech Recognition for WPM ----------------
-  const [wpmSeq, setWpmSeq] = useState([]);
-
-  useEffect(() => {
-    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window))
-      return;
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognizer = new SpeechRecognition();
-    recognizer.continuous = true;
-    recognizer.lang = "en-US";
-
-    let sessionStart = Date.now();
-    let words = 0;
-
-    recognizer.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; ++i) {
-        if (e.results[i].isFinal) {
-          const txt = e.results[i][0].transcript.trim();
-          words += txt.split(/\s+/).length;
-        }
-      }
-
-      const minutes = (Date.now() - sessionStart) / 60000; // ms->minutes
-      if (minutes > 0.083) {
-        // ~5 seconds
-        const wpm = words / minutes;
-        setWpmSeq((prev) => {
-          const arr = [...prev, wpm];
-          return arr.slice(-10); // keep last 10 values
-        });
-        // reset counters every 5s window to get quicker updates
-        if (minutes > 0.083) {
-          sessionStart = Date.now();
-          words = 0;
-        }
-      }
-    };
-
-    recognizer.onerror = () => {};
-    recognizer.start();
-
-    return () => recognizer.stop();
-  }, []);
-
   // Helper to start microphone stream
   const initAudio = async () => {
     try {
@@ -205,9 +159,7 @@ const PatientDashboard = () => {
       let body;
       // Image-based behaviors
       if (
-        ["eye_gaze", "tapping_hands", "tapping_feet", "sit_stand"].includes(
-          behaviorType
-        )
+        ["eye_gaze", "tapping_hands", "tapping_feet"].includes(behaviorType)
       ) {
         // Capture a sequence of 10 frames
         const frameSequence = captureFrameSequence(10);
@@ -220,30 +172,19 @@ const PatientDashboard = () => {
           frame_sequence: frameSequence, // send as frame_sequence
         });
       } else {
-        // Non-image behaviors: use real WPM data
-        if (behaviorType === "rapid_talking") {
-          let dataPayload;
-          if (wpmSeq.length >= 10) {
-            dataPayload = wpmSeq.slice(-10);
-          } else {
-            const af = getAudioFeatures();
-            if (!af) {
-              console.log("Skipping rapid_talking: no audio input");
-              return null;
-            }
-            const estWpm = Math.round((af[1] + af[2]) * 150 + 90); // heuristic 90-240
-            dataPayload = Array(10).fill(estWpm);
-          }
-          body = JSON.stringify({
-            behaviorType: behaviorType,
-            data: { rapid_talking: dataPayload },
-          });
+        // Non-image behaviors: use dummy data for now
+        let dummyData;
+        if (behaviorType === "sit_stand") {
+          dummyData = { sit_stand: Array(66).fill(0.5) };
+        } else if (behaviorType === "rapid_talking") {
+          dummyData = { rapid_talking: [120, 0.5, 140, 0.3, 110, 0.8] };
         } else {
-          body = JSON.stringify({
-            behaviorType: behaviorType,
-            data: { [behaviorType]: [] },
-          });
+          dummyData = { [behaviorType]: [] };
         }
+        body = JSON.stringify({
+          behaviorType: behaviorType,
+          data: dummyData,
+        });
       }
       const response = await fetch(`${backendUrl}/api/ml/analyze`, {
         method: "POST",
@@ -292,26 +233,13 @@ const PatientDashboard = () => {
       const framesForImages = captureFrameSequence(10);
 
       const behaviorsPayload = [];
-      ["eye_gaze", "tapping_hands", "tapping_feet", "sit_stand"].forEach(
-        (bt) => {
-          behaviorsPayload.push({ type: bt, data: framesForImages });
-        }
-      );
+      ["eye_gaze", "tapping_hands", "tapping_feet"].forEach((bt) => {
+        behaviorsPayload.push({ type: bt, data: framesForImages });
+      });
       // rapid_talking via audio features if mic available
       const audioFeatures = getAudioFeatures();
-      if (wpmSeq.length >= 10) {
-        behaviorsPayload.push({
-          type: "rapid_talking",
-          data: wpmSeq.slice(-10),
-        });
-      } else if (audioFeatures) {
-        const estWpm = Math.round(
-          (audioFeatures[1] + audioFeatures[2]) * 150 + 90
-        );
-        behaviorsPayload.push({
-          type: "rapid_talking",
-          data: Array(10).fill(estWpm),
-        });
+      if (audioFeatures) {
+        behaviorsPayload.push({ type: "rapid_talking", data: audioFeatures });
       }
 
       // Send one request to batch endpoint
