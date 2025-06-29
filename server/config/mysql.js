@@ -1,10 +1,14 @@
 import { Sequelize } from "sequelize";
 import "dotenv/config";
 
-// Prefer MySQL when a host is explicitly provided. Otherwise, default to SQLite.
-// This prevents crashes in production platforms (e.g. Render) where no MySQL
-// service is provisioned but NODE_ENV is automatically set to "production".
-const useSQLite = process.env.DB_DIALECT === "sqlite" || !process.env.DB_HOST;
+// Treat undefined DB_HOST *or* local placeholders (localhost / 127.0.0.1 / ::1) as
+// "no external MySQL provided" and fall back to SQLite automatically.
+const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(
+  (process.env.DB_HOST || "").toLowerCase()
+);
+
+const useSQLite =
+  process.env.DB_DIALECT === "sqlite" || !process.env.DB_HOST || isLocalHost;
 
 const sequelize = useSQLite
   ? new Sequelize({ dialect: "sqlite", storage: "dev.db.sqlite" })
