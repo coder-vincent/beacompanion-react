@@ -16,14 +16,23 @@ console.log = () => {};
 
 const app = express();
 const httpServer = createServer(app);
-const frontendOrigin =
-  process.env.CLIENT_URL ||
-  "http://localhost:5173" ||
-  "https://www.beacompanion.online";
+// Support multiple frontend origins
+const getAllowedOrigins = () => {
+  const origins = [
+    process.env.CLIENT_URL,
+    "https://www.beacompanion.online",
+    "https://beacompanion-react.vercel.app",
+    "http://localhost:5173", // for local development
+  ].filter(Boolean); // Remove undefined values
+
+  return origins.length > 0 ? origins : ["http://localhost:5173"];
+};
+
+const allowedOrigins = getAllowedOrigins();
 
 const io = new Server(httpServer, {
   cors: {
-    origin: frontendOrigin,
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -38,6 +47,7 @@ const initializeServer = async () => {
     // Sync models without altering schema on every start
     await sequelize.sync();
     console.log("Database models synchronized successfully");
+    console.log("Allowed CORS origins:", allowedOrigins);
 
     // Start the server
     httpServer.listen(port, () =>
@@ -50,7 +60,7 @@ const initializeServer = async () => {
 };
 
 const corsOptions = {
-  origin: frontendOrigin,
+  origin: allowedOrigins,
   credentials: true,
 };
 
