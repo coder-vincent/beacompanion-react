@@ -12,10 +12,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const backendUrl =
-      import.meta.env.VITE_BACKEND_URL || window.location.origin;
-
-    const socketInstance = io(backendUrl, {
+    const socketInstance = io("http://localhost:4000", {
       withCredentials: true,
     });
 
