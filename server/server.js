@@ -17,14 +17,18 @@ import { fileURLToPath } from "url";
 console.log = () => {};
 
 const app = express();
+
+// Allow-listed origins for both Express CORS and Socket.IO
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  process.env.FRONTEND_URL || "https://beacompanion.online",
+];
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      process.env.FRONTEND_URL,
-    ],
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -54,17 +58,22 @@ const initializeServer = async () => {
   }
 };
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  process.env.FRONTEND_URL,
-];
-
 // Increase JSON body parser limit for large ML data
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl) or those in the whitelist
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
