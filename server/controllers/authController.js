@@ -44,10 +44,11 @@ export const register = async (req, res) => {
     });
 
     // Enhanced cookie settings for cross-domain (registration)
+    const isHTTPS = req.headers["x-forwarded-proto"] === "https" || req.secure;
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: isHTTPS, // Force secure on HTTPS regardless of NODE_ENV
+      sameSite: isHTTPS ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     };
@@ -139,10 +140,11 @@ export const login = async (req, res) => {
     });
 
     // Enhanced cookie settings for cross-domain (login)
+    const isHTTPS = req.headers["x-forwarded-proto"] === "https" || req.secure;
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: isHTTPS, // Force secure on HTTPS regardless of NODE_ENV
+      sameSite: isHTTPS ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     };
@@ -189,10 +191,11 @@ export const logout = async (req, res) => {
       await deleteUserSessionByToken(token);
     }
 
+    const isHTTPS = req.headers["x-forwarded-proto"] === "https" || req.secure;
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: isHTTPS,
+      sameSite: isHTTPS ? "none" : "lax",
       path: "/",
     });
 
