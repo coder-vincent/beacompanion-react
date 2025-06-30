@@ -35,11 +35,13 @@ export const SocketProvider = ({ children }) => {
     const socketInstance = io(backendUrl, {
       withCredentials: true,
       transports: ["websocket", "polling"], // Allow fallback to polling
-      timeout: 10000, // 10 second timeout
-      forceNew: true, // Force new connection
+      timeout: 20000, // 20 second timeout (increased)
+      autoConnect: false, // Don't auto-connect immediately
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 3, // Reduced attempts
+      reconnectionDelay: 2000, // Increased delay
+      reconnectionDelayMax: 5000,
+      maxReconnectionAttempts: 3,
     });
 
     // Connection success
@@ -49,14 +51,16 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(true);
       setConnectionError(null);
 
-      // Send user info if logged in
-      if (isLoggedIn && userData) {
-        socketInstance.emit("user_join", {
-          userId: userData.id,
-          name: userData.name,
-          role: userData.role,
-        });
-      }
+      // Send user info if logged in (with delay to ensure stability)
+      setTimeout(() => {
+        if (isLoggedIn && userData && socketInstance.connected) {
+          socketInstance.emit("user_join", {
+            userId: userData.id,
+            name: userData.name,
+            role: userData.role,
+          });
+        }
+      }, 500);
     });
 
     // Connection error
@@ -65,13 +69,13 @@ export const SocketProvider = ({ children }) => {
       setConnectionError(error.message);
       setIsConnected(false);
 
-      // Show user-friendly error message
+      // Only show error toast for persistent failures (not on every retry)
       if (error.message.includes("CORS")) {
-        toast.error("Connection failed: CORS error");
+        console.warn("CORS error - check server configuration");
       } else if (error.message.includes("timeout")) {
-        toast.error("Connection failed: Server timeout");
+        console.warn("Connection timeout - server may be slow");
       } else {
-        toast.error("Connection failed: " + error.message);
+        console.warn("Connection error:", error.message);
       }
     });
 
@@ -80,13 +84,13 @@ export const SocketProvider = ({ children }) => {
       console.log("🔌 Disconnected from socket server. Reason:", reason);
       setIsConnected(false);
 
-      // Auto-reconnect on unexpected disconnections
+      // Only log disconnect reasons, let Socket.IO handle reconnection automatically
       if (reason === "io server disconnect") {
-        // Server disconnected the socket, reconnect manually
-        setTimeout(() => {
-          console.log("🔄 Attempting to reconnect...");
-          socketInstance.connect();
-        }, 1000);
+        console.log("🔄 Server initiated disconnect");
+      } else if (reason === "transport close") {
+        console.log("🔄 Transport closed - network issue");
+      } else {
+        console.log("🔄 Disconnect reason:", reason);
       }
     });
 
@@ -105,9 +109,10 @@ export const SocketProvider = ({ children }) => {
 
     // Reconnection failed
     socketInstance.on("reconnect_failed", () => {
-      console.log("❌ Failed to reconnect");
+      console.log("❌ Failed to reconnect after all attempts");
       setConnectionError("Failed to reconnect to server");
-      toast.error("Unable to reconnect to server");
+      // Only show toast after all attempts failed
+      toast.error("Connection lost - please refresh page");
     });
 
     // Custom events
@@ -124,10 +129,13 @@ export const SocketProvider = ({ children }) => {
       }
     });
 
+    // Manually connect after setting up listeners
+    socketInstance.connect();
+
     setSocket(socketInstance);
 
     return socketInstance;
-  }, [backendUrl, isLoggedIn, userData]);
+  }, [backendUrl]); // Remove isLoggedIn, userData from dependencies to prevent reconnections
 
   // Effect to handle socket connection
   useEffect(() => {
@@ -150,18 +158,29 @@ export const SocketProvider = ({ children }) => {
     };
   }, [connectSocket]);
 
-  // Emit user join when authentication state changes
+  // Emit user join when authentication state changes (with stability check)
   useEffect(() => {
-    if (socket && isConnected && isLoggedIn && userData) {
-      socket.emit("user_join", {
-        userId: userData.id,
-        name: userData.name,
-        role: userData.role,
-      });
-    } else if (socket && isConnected && !isLoggedIn) {
-      socket.emit("user_leave");
-    }
-  }, [socket, isConnected, isLoggedIn, userData]);
+    if (!socket || !isConnected) return;
+
+    const handleAuthChange = () => {
+      if (isLoggedIn && userData) {
+        console.log("👤 Sending user_join for:", userData.email);
+        socket.emit("user_join", {
+          userId: userData.id,
+          name: userData.name,
+          role: userData.role,
+        });
+      } else if (!isLoggedIn) {
+        console.log("👤 Sending user_leave");
+        socket.emit("user_leave");
+      }
+    };
+
+    // Add small delay to prevent rapid auth state changes
+    const timeoutId = setTimeout(handleAuthChange, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [socket, isConnected, isLoggedIn, userData?.id]); // Only track user ID to prevent unnecessary updates
 
   const value = {
     socket,

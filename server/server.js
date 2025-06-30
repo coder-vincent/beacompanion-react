@@ -40,7 +40,12 @@ const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
     credentials: true,
+    methods: ["GET", "POST"],
   },
+  allowEIO3: true, // Better compatibility
+  transports: ["websocket", "polling"],
+  pingTimeout: 60000, // 60 seconds
+  pingInterval: 25000, // 25 seconds
 });
 
 const port = process.env.PORT || 4000;
