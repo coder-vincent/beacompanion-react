@@ -36,6 +36,15 @@ mlRouter.get("/health", (req, res) => {
   });
 });
 
+// Basic ping route for testing
+mlRouter.get("/ping", (req, res) => {
+  res.json({
+    success: true,
+    message: "ML routes are working",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ML Analysis Routes (with authentication and large payload support)
 mlRouter.post("/analyze", userAuth, mlDataMiddleware, analyzeBehavior);
 mlRouter.get("/status", userAuth, getModelStatus);
