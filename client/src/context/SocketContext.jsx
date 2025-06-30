@@ -13,7 +13,9 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     const backendUrl =
-      import.meta.env.VITE_BACKEND_URL || window.location.origin;
+      import.meta.env.VITE_BACKEND_URL ||
+      window.location.origin ||
+      "https://www.beacompanion.online";
     const socketInstance = io(backendUrl, {
       withCredentials: true,
     });

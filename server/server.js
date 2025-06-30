@@ -16,7 +16,10 @@ console.log = () => {};
 
 const app = express();
 const httpServer = createServer(app);
-const frontendOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+const frontendOrigin =
+  process.env.CLIENT_URL ||
+  "http://localhost:5173" ||
+  "https://www.beacompanion.online";
 
 const io = new Server(httpServer, {
   cors: {
