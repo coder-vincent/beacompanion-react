@@ -161,7 +161,7 @@ def _frames_to_tensor(frames: List[str]) -> torch.Tensor:
     return torch.stack(tensors, dim=0)  # (T, 3, H, W)
 
 
-def _eye_crop(img: Image.Image) -> Image.Image | None:
+def _eye_crop(img: Image.Image) -> Optional[Image.Image]:
     """Return a 64×64 crop that covers both eyes or None if no face."""
     
     mp_face_mesh, _, _ = get_mediapipe_models()
@@ -195,7 +195,7 @@ def _eye_crop(img: Image.Image) -> Image.Image | None:
     return crop_pil
 
 
-def _hand_crop(img: Image.Image) -> Image.Image | None:
+def _hand_crop(img: Image.Image) -> Optional[Image.Image]:
     """Return crop around first detected hand suitable for tapping models."""
 
     _, mp_hands, _ = get_mediapipe_models()
@@ -225,7 +225,7 @@ def _hand_crop(img: Image.Image) -> Image.Image | None:
     return Image.fromarray(crop)
 
 
-def _foot_crop(img: Image.Image) -> Image.Image | None:
+def _foot_crop(img: Image.Image) -> Optional[Image.Image]:
     """Return crop around feet region using Pose landmarks (ankles)."""
 
     _, _, mp_pose = get_mediapipe_models()
@@ -254,7 +254,7 @@ def _foot_crop(img: Image.Image) -> Image.Image | None:
     return Image.fromarray(crop)
 
 
-def _pose_xy(img: Image.Image) -> List[float] | None:
+def _pose_xy(img: Image.Image) -> Optional[List[float]]:
     """Extract 33 pose landmarks as flat (x,y) sequence for sit-stand."""
 
     _, _, mp_pose = get_mediapipe_models()
