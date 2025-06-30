@@ -30,14 +30,14 @@ const sequelize = new Sequelize(
 );
 
 // Diagnostic output for troubleshooting
-console.error(
-  "[DB] Connecting to MySQL:",
-  process.env.DB_HOST,
-  process.env.DB_PORT || 3306,
-  process.env.DB_DATABASE,
-  process.env.DB_USER,
-  `SSL=${process.env.DB_SSL}`
-);
+console.log("🔍 [DB] Configuration check:");
+console.log("- Host:", process.env.DB_HOST || "❌ NOT SET");
+console.log("- Port:", process.env.DB_PORT || 3306);
+console.log("- Database:", process.env.DB_DATABASE || "❌ NOT SET");
+console.log("- User:", process.env.DB_USER || "❌ NOT SET");
+console.log("- Password:", process.env.DB_PASS ? "✅ Set" : "❌ NOT SET");
+console.log("- SSL:", process.env.DB_SSL || "false");
+console.log("- NODE_ENV:", process.env.NODE_ENV || "not set");
 
 const connectDB = async () => {
   try {

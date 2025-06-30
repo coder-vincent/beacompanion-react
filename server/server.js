@@ -10,9 +10,14 @@ import userRouter from "./routes/userRoutes.js";
 import contentRouter from "./routes/contentRoutes.js";
 import mlRouter from "./routes/mlRoutes.js";
 import sessionRouter from "./routes/sessionRoutes.js";
+import testRouter from "./routes/testRoutes.js";
 
 /* eslint-disable no-console */
-console.log = () => {};
+// Enable console.log for debugging during startup
+if (process.env.NODE_ENV === "production") {
+  // Keep console.log enabled in production for debugging
+  // console.log = () => {};
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -85,6 +90,7 @@ app.set("io", io);
 
 // API Endpoints
 app.get("/", (req, res) => res.send("Server Connected"));
+app.use("/api/test", testRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/content", contentRouter);

@@ -97,15 +97,21 @@ export const login = async (req, res) => {
   }
 
   try {
+    console.log("🔐 Login attempt for email:", email);
+
     let user = await userModel.findOne({ where: { email } });
+    console.log("👤 User found:", user ? "Yes" : "No");
 
     if (!user) {
+      console.log("❌ User not found for email:", email);
       return res.json({ success: false, message: "Invalid email" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log("🔑 Password match:", isMatch ? "Yes" : "No");
 
     if (!isMatch) {
+      console.log("❌ Invalid password for user:", email);
       return res.json({ success: false, message: "Invalid Password" });
     }
 
@@ -117,6 +123,7 @@ export const login = async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
+    console.log("💾 Creating user session...");
     await createUserSession({
       userId: user.id,
       token,
@@ -131,10 +138,28 @@ export const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    console.log("✅ Login successful for user:", email, "Role:", user.role);
     return res.json({ success: true, role: user.role, token });
   } catch (err) {
-    console.error("Login error:", err);
-    return res.json({ success: false, message: err.message });
+    console.error("❌ Login error details:");
+    console.error("- Error message:", err.message);
+    console.error("- Error code:", err.code);
+    console.error("- Error stack:", err.stack);
+    console.error("- Database host:", process.env.DB_HOST);
+    console.error("- Database name:", process.env.DB_DATABASE);
+
+    return res.json({
+      success: false,
+      message: `Database error: ${err.message}`,
+      details:
+        process.env.NODE_ENV === "development"
+          ? {
+              error: err.message,
+              code: err.code,
+              host: process.env.DB_HOST,
+            }
+          : undefined,
+    });
   }
 };
 
