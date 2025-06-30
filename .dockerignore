@@ -42,7 +42,23 @@ machine-learning/models/speech/rapid_talking_data.csv
 .DS_Store
 Thumbs.db
 
+# Docker files (for optimized builds)
+Dockerfile.optimized
+docker-compose.yml
+.env.docker*
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log* 
+yarn-error.log*
+
+# Additional Python files to exclude
+*.egg-info/
+dist/
+build/
+
+# Test files
+test/
+tests/
+*_test.py
+test_*.py 

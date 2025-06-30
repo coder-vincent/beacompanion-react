@@ -1,0 +1,71 @@
+# Multi-stage build for better optimization
+FROM node:18-bullseye as base
+
+# Install system dependencies (cached layer)
+RUN apt-get update && apt-get install -y \
+    curl \
+    python3.9 \
+    python3.9-pip \
+    python3.9-dev \
+    python3.9-venv \
+    build-essential \
+    # MediaPipe dependencies
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libsm6 \
+    libxext6 \
+    libfontconfig1 \
+    libxrender1 \
+    libgomp1 \
+    # OpenCV dependencies  
+    libopencv-dev \
+    # Cleanup to reduce image size
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create symbolic links for python command
+RUN ln -s /usr/bin/python3.9 /usr/bin/python3
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN ln -s /usr/bin/pip3 /usr/bin/pip
+
+# Create app user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy and install Python dependencies first (better caching)
+COPY machine-learning/requirements.txt ./machine-learning/
+RUN pip3 install --no-cache-dir --upgrade pip
+RUN pip3 install --no-cache-dir -r machine-learning/requirements.txt
+
+# Copy and install Node.js dependencies 
+COPY server/package*.json ./server/
+WORKDIR /app/server
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code
+WORKDIR /app
+COPY server/ ./server/
+COPY machine-learning/ ./machine-learning/
+
+# Create necessary directories and set permissions
+RUN mkdir -p /tmp /app/logs \
+    && chown -R appuser:appuser /app /tmp
+
+# Switch to non-root user for security
+USER appuser
+
+# Health check for container monitoring
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:4000/api/ml/health || exit 1
+
+# Expose port
+EXPOSE 4000
+
+# Set working directory to server
+WORKDIR /app/server
+
+# Start the server
+CMD ["node", "server.js"] 
