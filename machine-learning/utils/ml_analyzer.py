@@ -122,19 +122,8 @@ _EYE_IDXS = [
     362, 398, 384, 385, 386, 387, 388, 466, 263, 249, 390, 373, 374, 380
 ]
 
-# MediaPipe Hands and Pose instances (more lenient settings)
-_mp_hands = mp.solutions.hands.Hands(
-    static_image_mode=True, 
-    max_num_hands=2,
-    min_detection_confidence=0.3,  # Lower from default 0.5
-    min_tracking_confidence=0.3    # Lower from default 0.5
-)
-_mp_pose = mp.solutions.pose.Pose(
-    static_image_mode=True,
-    min_detection_confidence=0.3,  # Lower from default 0.5
-    min_tracking_confidence=0.3,   # Lower from default 0.5
-    model_complexity=1             # Use lighter model for better performance
-)
+# MediaPipe models are lazy-loaded via get_mediapipe_models() function
+# No module-level initialization to avoid AttributeError when MediaPipe is unavailable
 
 
 # ---------------------------------------------------------------------------
