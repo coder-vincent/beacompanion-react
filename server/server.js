@@ -20,7 +20,7 @@ const frontendOrigin = process.env.CLIENT_URL || "http://localhost:5173";
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [frontendOrigin],
+    origin: (origin, callback) => callback(null, true),
     credentials: true,
   },
 });
@@ -46,13 +46,17 @@ const initializeServer = async () => {
   }
 };
 
-const allowedOrigins = [frontendOrigin];
+const corsOptions = {
+  origin: (origin, callback) => callback(null, true),
+  credentials: true,
+};
+
+app.use(cookieParser());
+app.use(cors(corsOptions));
 
 // Increase JSON body parser limit for large ML data
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use(cookieParser());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
