@@ -22,6 +22,7 @@ const io = new Server(httpServer, {
       "http://localhost:5173",
       "http://localhost:5174",
       process.env.FRONTEND_URL,
+      process.env.VITE_BACKEND_URL,
     ],
     credentials: true,
   },
@@ -52,6 +53,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   process.env.FRONTEND_URL,
+  process.env.VITE_BACKEND_URL,
 ];
 
 // Increase JSON body parser limit for large ML data
