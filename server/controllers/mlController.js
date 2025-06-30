@@ -10,20 +10,40 @@ const __dirname = path.dirname(__filename);
 // ML Model Test Controller
 export const testModels = async (req, res) => {
   try {
+    console.log("Testing ML models...");
+
     const pythonScript = path.join(
       __dirname,
-      "../../machine-learning/utils/simple_test.py"
+      "../../machine-learning/utils/health_check.py"
     );
     const workingDir = path.join(__dirname, "../../machine-learning");
 
-    console.log("🧪 Testing ML models...");
-    console.log("- Script:", pythonScript);
-    console.log("- Working Dir:", workingDir);
+    console.log("Python script path:", pythonScript);
+    console.log("Working directory:", workingDir);
+
+    // Check if script exists
+    if (!fs.existsSync(pythonScript)) {
+      return res.status(500).json({
+        success: false,
+        message: "Test script not found",
+        script_path: pythonScript,
+      });
+    }
 
     const pythonProcess = spawn("python", [pythonScript], {
       cwd: workingDir,
       stdio: ["pipe", "pipe", "pipe"],
     });
+
+    // Short timeout for health check - 10 seconds
+    const timeout = setTimeout(() => {
+      pythonProcess.kill("SIGTERM");
+      console.error("Health check timed out after 10 seconds");
+      res.status(408).json({
+        success: false,
+        message: "Model test timed out",
+      });
+    }, 10 * 1000); // 10 seconds
 
     let result = "";
     let error = "";
@@ -34,49 +54,72 @@ export const testModels = async (req, res) => {
 
     pythonProcess.stderr.on("data", (data) => {
       error += data.toString();
-      console.log("Python stderr:", data.toString());
+      console.log("Python test stderr:", data.toString());
     });
 
     pythonProcess.on("close", (code) => {
-      console.log(`Python test process exited with code: ${code}`);
-      console.log(`Test result: "${result}"`);
+      clearTimeout(timeout);
+
+      console.log(`Test process exited with code: ${code}`);
+      console.log(`Test stdout: "${result}"`);
+      console.log(`Test stderr: "${error}"`);
 
       if (code !== 0) {
-        console.error("Model test failed:", error);
+        console.error("Python test script error:", error);
         return res.status(500).json({
           success: false,
-          message: "ML model test failed",
+          message: "ML test failed",
           error: error,
         });
       }
 
       try {
-        const testResults = JSON.parse(result);
-        res.json({
-          success: true,
-          message: "ML models tested successfully",
-          test_results: testResults,
-        });
+        if (!result.trim()) {
+          console.error("Python test script returned empty result");
+          return res.status(500).json({
+            success: false,
+            message: "ML test returned empty result",
+          });
+        }
+
+        const testResult = JSON.parse(result);
+        console.log("Parsed test result:", testResult);
+
+        if (testResult.status === "success") {
+          res.json({
+            success: true,
+            test_result: testResult,
+            message: "ML environment test completed successfully",
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            message: testResult.message || "ML test failed",
+            error: testResult.error,
+          });
+        }
       } catch (parseError) {
         console.error("JSON parse error:", parseError);
+        console.error("Raw result:", result);
         res.status(500).json({
           success: false,
-          message: "Failed to parse test results",
+          message: "Failed to parse test result",
           error: parseError.message,
         });
       }
     });
 
-    // Set timeout for test
-    setTimeout(() => {
-      pythonProcess.kill("SIGTERM");
-      res.status(408).json({
+    pythonProcess.on("error", (error) => {
+      clearTimeout(timeout);
+      console.error("Failed to start Python process:", error);
+      res.status(500).json({
         success: false,
-        message: "Model test timed out",
+        message: "Failed to start Python process",
+        error: error.message,
       });
-    }, 30000); // 30 seconds
+    });
   } catch (error) {
-    console.error("Model test error:", error);
+    console.error("Test controller error:", error);
     res.status(500).json({
       success: false,
       message: "Model test failed",
@@ -200,16 +243,16 @@ export const analyzeBehavior = async (req, res) => {
         stdio: ["pipe", "pipe", "pipe"],
       });
 
-      // Set a timeout for the Python process (5 minutes)
+      // Set a timeout for the Python process (60 seconds)
       const timeout = setTimeout(() => {
         pythonProcess.kill("SIGTERM");
-        console.error("Python process timed out after 5 minutes");
+        console.error("Python process timed out after 60 seconds");
         res.status(408).json({
           success: false,
           message:
             "ML analysis timed out. Please try with smaller data or contact support.",
         });
-      }, 5 * 60 * 1000); // 5 minutes
+      }, 60 * 1000); // 60 seconds
 
       let result = "";
       let error = "";

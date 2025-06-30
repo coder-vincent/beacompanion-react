@@ -33,4 +33,14 @@ mlRouter.post("/batch", userAuth, mlDataMiddleware, batchAnalysis);
 mlRouter.post("/evaluate", userAuth, mlDataMiddleware, evaluateDataset);
 mlRouter.get("/test", testModels); // No auth required for testing
 
+// Simple health check that doesn't require Python
+mlRouter.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    message: "ML service is running",
+  });
+});
+
 export default mlRouter;
