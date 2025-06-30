@@ -64,6 +64,10 @@ def main() -> None:
             continue
         single = _predict(b_type, data)
         single["behavior_type"] = b_type
+        
+        # Convert predicted_score to binary label (threshold at 0.5)
+        predicted_score = single.get("predicted_score", 0)
+        single["detected"] = predicted_score > 0.5
         single["label"] = int(single["detected"])
         results.append(single)
 
