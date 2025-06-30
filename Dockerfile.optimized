@@ -20,6 +20,12 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     # OpenCV dependencies  
     libopencv-dev \
+    # Additional MediaPipe dependencies for video processing
+    libgstreamer1.0-0 \
+    libgstreamer-plugins-base1.0-0 \
+    libgstreamer-plugins-good1.0-0 \
+    libgstreamer-plugins-bad1.0-0 \
+    libgstreamer-plugins-ugly1.0-0 \
     # Cleanup to reduce image size
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
@@ -59,7 +65,7 @@ USER appuser
 
 # Health check for container monitoring
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:4000/api/ml/health || exit 1
+    CMD curl -f http://localhost:4000/api/ml/test || exit 1
 
 # Expose port
 EXPOSE 4000

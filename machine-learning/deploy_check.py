@@ -50,7 +50,8 @@ def main():
             available_packages.append("mediapipe")
             print("✓ MediaPipe available", file=sys.stderr)
         except ImportError as e:
-            print(f"✗ MediaPipe not available: {e}", file=sys.stderr)
+            if os.getenv('DEBUG', '').lower() in ('true', '1', 'yes'):
+                print(f"✗ MediaPipe not available: {e}", file=sys.stderr)
         
         # Check model files
         model_files = [

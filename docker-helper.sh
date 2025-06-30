@@ -97,13 +97,31 @@ test() {
     print_info "Testing BeaCompanion ML endpoints..."
     
     # Wait for application to be ready
-    sleep 10
+    sleep 15
     
     # Test health endpoint
-    if curl -f http://localhost:4000/api/ml/health > /dev/null 2>&1; then
+    print_info "Testing ML health endpoint..."
+    if curl -f http://localhost:4000/api/ml/test > /dev/null 2>&1; then
         print_success "Health check passed!"
     else
         print_error "Health check failed!"
+        return 1
+    fi
+    
+    print_success "All tests passed!"
+}
+
+# Function to test MediaPipe specifically
+test_mediapipe() {
+    print_info "Testing MediaPipe in Docker container..."
+    
+    # Start the MediaPipe test service
+    COMPOSE_PROFILES=test docker-compose up --abort-on-container-exit mediapipe-test
+    
+    if [ $? -eq 0 ]; then
+        print_success "MediaPipe test passed!"
+    else
+        print_error "MediaPipe test failed!"
         return 1
     fi
 }
@@ -142,13 +160,17 @@ case "$1" in
         check_docker
         test
         ;;
+    test-mediapipe)
+        check_docker
+        test_mediapipe
+        ;;
     cleanup)
         check_docker
         cleanup
         ;;
     *)
         echo "BeaCompanion Docker Helper"
-        echo "Usage: $0 {build|run|run-local|run-production|stop|logs|status|test|cleanup}"
+        echo "Usage: $0 {build|run|run-local|run-production|stop|logs|status|test|test-mediapipe|cleanup}"
         echo ""
         echo "Commands:"
         echo "  build           - Build the Docker image"
@@ -158,7 +180,8 @@ case "$1" in
         echo "  stop            - Stop the application"
         echo "  logs            - View application logs"
         echo "  status          - Show container status"
-        echo "  test            - Test the application"
+        echo "  test            - Test the application endpoints"
+        echo "  test-mediapipe  - Test MediaPipe functionality in Docker"
         echo "  cleanup         - Remove all Docker resources"
         exit 1
         ;;

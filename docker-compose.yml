@@ -33,11 +33,29 @@ services:
       - beacompanion-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/api/ml/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/ml/test"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # MediaPipe test service (for validation)
+  mediapipe-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    environment:
+      - NODE_ENV=test
+    volumes:
+      - ./machine-learning:/app/machine-learning:ro
+    working_dir: /app/machine-learning
+    command: python docker_test.py
+    networks:
+      - beacompanion-network
+    profiles:
+      - test
+    depends_on:
+      - beacompanion-app
 
   # Optional: Nginx reverse proxy for production
   nginx:
