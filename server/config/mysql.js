@@ -5,9 +5,7 @@ import "dotenv/config";
 // gracefully fall back to an in-file SQLite database. This allows the server to
 // boot without external infrastructure, which is handy for automated tests.
 
-const useSQLite =
-  process.env.DB_DIALECT === "sqlite" ||
-  (!process.env.DB_HOST && process.env.NODE_ENV !== "production");
+const useSQLite = process.env.DB_DIALECT === "sqlite" || !process.env.DB_HOST;
 
 const sequelize = useSQLite
   ? new Sequelize({ dialect: "sqlite", storage: "dev.db.sqlite" })
