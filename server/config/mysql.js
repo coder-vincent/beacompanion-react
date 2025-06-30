@@ -13,7 +13,13 @@ const sequelize = useSQLite
       process.env.DB_DATABASE || "beacompanion",
       process.env.DB_USER || "root",
       process.env.DB_PASS || "",
-      { host: process.env.DB_HOST || "localhost", dialect: "mysql" }
+      {
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 3306,
+        dialect: "mysql",
+        dialectOptions:
+          process.env.DB_SSL === "true" ? { ssl: { require: true } } : {},
+      }
     );
 
 const connectDB = async () => {
