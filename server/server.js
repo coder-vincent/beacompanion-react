@@ -77,11 +77,182 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Socket.IO connection handling
-io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
+const connectedUsers = new Map(); // Track connected users
 
-  socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
+io.on("connection", (socket) => {
+  console.log("🔌 Client connected:", socket.id);
+
+  // Handle user joining
+  socket.on("user_join", (userData) => {
+    try {
+      console.log("👤 User joined:", userData);
+
+      // Store user info with socket
+      socket.userId = userData.userId;
+      socket.userData = userData;
+
+      // Add to connected users map
+      connectedUsers.set(userData.userId, {
+        socketId: socket.id,
+        userData: userData,
+        connectedAt: new Date(),
+      });
+
+      // Join user to their own room for targeted messages
+      socket.join(`user_${userData.userId}`);
+
+      // Join user to role-based room
+      socket.join(`role_${userData.role}`);
+
+      // Broadcast user list update to all clients
+      io.emit("userListUpdate", {
+        type: "user_joined",
+        user: userData,
+        connectedUsers: Array.from(connectedUsers.values()).map(
+          (u) => u.userData
+        ),
+      });
+
+      console.log(
+        `✅ User ${userData.name} (${userData.role}) joined successfully`
+      );
+    } catch (error) {
+      console.error("❌ Error handling user join:", error);
+    }
+  });
+
+  // Handle user leaving
+  socket.on("user_leave", () => {
+    try {
+      if (socket.userId) {
+        console.log("👋 User leaving:", socket.userData?.name);
+
+        // Remove from connected users
+        connectedUsers.delete(socket.userId);
+
+        // Leave rooms
+        socket.leave(`user_${socket.userId}`);
+        if (socket.userData?.role) {
+          socket.leave(`role_${socket.userData.role}`);
+        }
+
+        // Broadcast user list update
+        io.emit("userListUpdate", {
+          type: "user_left",
+          user: socket.userData,
+          connectedUsers: Array.from(connectedUsers.values()).map(
+            (u) => u.userData
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error handling user leave:", error);
+    }
+  });
+
+  // Handle role changes
+  socket.on("role_changed", (newUserData) => {
+    try {
+      console.log("🔄 User role changed:", newUserData);
+
+      // Leave old role room
+      if (socket.userData?.role) {
+        socket.leave(`role_${socket.userData.role}`);
+      }
+
+      // Update user data
+      socket.userData = newUserData;
+
+      // Join new role room
+      socket.join(`role_${newUserData.role}`);
+
+      // Update connected users map
+      if (connectedUsers.has(newUserData.userId)) {
+        connectedUsers.set(newUserData.userId, {
+          ...connectedUsers.get(newUserData.userId),
+          userData: newUserData,
+        });
+      }
+
+      // Send role change notification to the specific user
+      socket.emit("userDataUpdate", newUserData);
+
+      // Broadcast user list update
+      io.emit("userListUpdate", {
+        type: "user_updated",
+        user: newUserData,
+        connectedUsers: Array.from(connectedUsers.values()).map(
+          (u) => u.userData
+        ),
+      });
+    } catch (error) {
+      console.error("❌ Error handling role change:", error);
+    }
+  });
+
+  // Handle sending notifications
+  socket.on("send_notification", (data) => {
+    try {
+      const { targetUserId, targetRole, message, type } = data;
+
+      if (targetUserId) {
+        // Send to specific user
+        io.to(`user_${targetUserId}`).emit("notification", {
+          message,
+          type: type || "info",
+          from: socket.userData?.name || "System",
+          timestamp: new Date(),
+        });
+      } else if (targetRole) {
+        // Send to all users with specific role
+        io.to(`role_${targetRole}`).emit("notification", {
+          message,
+          type: type || "info",
+          from: socket.userData?.name || "System",
+          timestamp: new Date(),
+        });
+      } else {
+        // Broadcast to all connected users
+        io.emit("notification", {
+          message,
+          type: type || "info",
+          from: socket.userData?.name || "System",
+          timestamp: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error sending notification:", error);
+    }
+  });
+
+  // Handle disconnect
+  socket.on("disconnect", (reason) => {
+    try {
+      console.log("🔌 Client disconnected:", socket.id, "Reason:", reason);
+
+      if (socket.userId) {
+        console.log("👋 User disconnected:", socket.userData?.name);
+
+        // Remove from connected users
+        connectedUsers.delete(socket.userId);
+
+        // Broadcast user list update
+        io.emit("userListUpdate", {
+          type: "user_disconnected",
+          user: socket.userData,
+          connectedUsers: Array.from(connectedUsers.values()).map(
+            (u) => u.userData
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error handling disconnect:", error);
+    }
+  });
+
+  // Handle errors
+  socket.on("error", (error) => {
+    console.error("❌ Socket error:", error);
   });
 });
 

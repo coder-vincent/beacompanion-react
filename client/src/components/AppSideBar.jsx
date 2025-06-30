@@ -113,10 +113,10 @@ export function AppSidebar(props) {
   const { userData, setUserData } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
-  const socket = useSocket();
+  const { socket, isConnected } = useSocket();
 
   useEffect(() => {
-    if (socket) {
+    if (socket && isConnected) {
       // Listen for user data updates
       socket.on("userDataUpdate", (updatedUserData) => {
         if (updatedUserData && updatedUserData.role !== userData?.role) {
@@ -132,7 +132,7 @@ export function AppSidebar(props) {
         socket.off("userDataUpdate");
       };
     }
-  }, [socket, setUserData, userData?.role, navigate]);
+  }, [socket, isConnected, setUserData, userData?.role, navigate]);
 
   const navItems = getNavItems(userData?.role)?.map((item) => ({
     ...item,

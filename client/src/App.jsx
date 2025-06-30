@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/dashboards/admin/AdminDashboard";
 import AdminAbout from "./pages/dashboards/admin/AdminAbout";
 import AdminFAQ from "./pages/dashboards/admin/AdminFAQ";
 import AdminAccounts from "./pages/dashboards/admin/AdminAccounts";
+import SocketStatus from "./components/SocketStatus";
 
 const App = () => {
   return (
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/patient-about" element={<PatientAbout />} />
         <Route path="/patient-faq" element={<PatientFAQ />} />
       </Routes>
+      <SocketStatus />
     </div>
   );
 };
