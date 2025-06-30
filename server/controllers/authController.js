@@ -54,6 +54,8 @@ export const register = async (req, res) => {
 
     res.cookie("token", token, cookieOptions);
     console.log("🍪 Registration cookie set with options:", cookieOptions);
+    console.log("🔗 Request origin:", req.headers.origin);
+    console.log("🔗 Configured CLIENT_URL:", process.env.CLIENT_URL);
 
     // Send email if SMTP is configured
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -147,6 +149,12 @@ export const login = async (req, res) => {
 
     res.cookie("token", token, cookieOptions);
     console.log("🍪 Login cookie set with options:", cookieOptions);
+    console.log("🔗 Request origin:", req.headers.origin);
+    console.log("🔗 Configured CLIENT_URL:", process.env.CLIENT_URL);
+    console.log(
+      "🔗 Origin matches CLIENT_URL:",
+      req.headers.origin === process.env.CLIENT_URL
+    );
     console.log("✅ Login successful for user:", email, "Role:", user.role);
     return res.json({ success: true, role: user.role, token });
   } catch (err) {

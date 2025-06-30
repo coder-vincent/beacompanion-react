@@ -27,6 +27,7 @@ const getAllowedOrigins = () => {
     process.env.CLIENT_URL,
     "https://www.beacompanion.online",
     "https://beacompanion-react.vercel.app",
+    "https://beacompanion.vercel.app", // Alternative Vercel domain
     "http://localhost:5173", // for local development
   ].filter(Boolean); // Remove undefined values
 
