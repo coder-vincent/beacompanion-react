@@ -12,7 +12,11 @@ import { dirname, join } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-console.info("🚀 Starting BeaCompanion Development Environment\n");
+// Silence logs for non-verbose mode
+const silent = true;
+if (!silent) {
+  console.info("🚀 Starting BeaCompanion Development Environment\n");
+}
 
 // Colors for console output
 const colors = {
@@ -26,8 +30,10 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
-function log(message, color = "reset") {
-  console.info(`${colors[color]}${message}${colors.reset}`);
+function log(_msg, _color = "reset") {
+  if (!silent) {
+    console.info(`${colors[_color]}${_msg}${colors.reset}`);
+  }
 }
 
 // Start backend server

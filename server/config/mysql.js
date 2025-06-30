@@ -1,14 +1,13 @@
 import { Sequelize } from "sequelize";
 import "dotenv/config";
 
-// Treat undefined DB_HOST *or* local placeholders (localhost / 127.0.0.1 / ::1) as
-// "no external MySQL provided" and fall back to SQLite automatically.
-const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(
-  (process.env.DB_HOST || "").toLowerCase()
-);
+// If explicit dialect is set to sqlite or if running in CI/Local env without MySQL,
+// gracefully fall back to an in-file SQLite database. This allows the server to
+// boot without external infrastructure, which is handy for automated tests.
 
 const useSQLite =
-  process.env.DB_DIALECT === "sqlite" || !process.env.DB_HOST || isLocalHost;
+  process.env.DB_DIALECT === "sqlite" ||
+  (!process.env.DB_HOST && process.env.NODE_ENV !== "production");
 
 const sequelize = useSQLite
   ? new Sequelize({ dialect: "sqlite", storage: "dev.db.sqlite" })

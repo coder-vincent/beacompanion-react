@@ -10,3 +10,5 @@ jupyterlab
 pyyaml  # For config files
 pytest  # For unit testing
 tensorboard  # If using logs
+pillow
+mediapipe

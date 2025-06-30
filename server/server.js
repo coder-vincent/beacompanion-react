@@ -10,42 +10,28 @@ import userRouter from "./routes/userRoutes.js";
 import contentRouter from "./routes/contentRoutes.js";
 import mlRouter from "./routes/mlRoutes.js";
 import sessionRouter from "./routes/sessionRoutes.js";
-import path from "path";
-import { fileURLToPath } from "url";
 
 /* eslint-disable no-console */
 console.log = () => {};
 
 const app = express();
-
-// Allow-listed origins for both Express CORS and Socket.IO
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  process.env.FRONTEND_URL || "https://beacompanion.online",
-];
-
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: ["http://localhost:5173", "http://localhost:5174"],
     credentials: true,
   },
 });
 
 const port = process.env.PORT || 4000;
 
-// Resolve __dirname in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Initialize database connection and sync models
 const initializeServer = async () => {
   try {
     await connectDB();
 
-    // Sync all models
-    await sequelize.sync({ alter: true });
+    // Sync models without altering schema on every start
+    await sequelize.sync();
     console.log("Database models synchronized successfully");
 
     // Start the server
@@ -58,22 +44,13 @@ const initializeServer = async () => {
   }
 };
 
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+
 // Increase JSON body parser limit for large ML data
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl) or those in the whitelist
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
@@ -94,17 +71,6 @@ app.use("/api/user", userRouter);
 app.use("/api/content", contentRouter);
 app.use("/api/ml", mlRouter);
 app.use("/api/session", sessionRouter);
-
-// ---------------- Production static files ----------------
-if (process.env.NODE_ENV === "production") {
-  const clientBuild = path.join(__dirname, "../client/dist");
-  app.use(express.static(clientBuild));
-
-  // SPA fallback
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(clientBuild, "index.html"));
-  });
-}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
