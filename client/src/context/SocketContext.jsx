@@ -22,7 +22,7 @@ export const SocketProvider = ({ children }) => {
   const [connectionError, setConnectionError] = useState(null);
   const { backendUrl, isLoggedIn, userData } = useContext(AppContext);
 
-  const connectSocket = useCallback(() => {
+  const connectSocket = useCallback(async () => {
     // Don't connect if no backend URL is available
     if (!backendUrl) {
       console.error("❌ No backend URL available for socket connection");
@@ -32,16 +32,34 @@ export const SocketProvider = ({ children }) => {
 
     console.log("🔌 Attempting socket connection to:", backendUrl);
 
+    // Health check before Socket.IO connection
+    try {
+      const response = await fetch(backendUrl, { method: "HEAD" });
+      if (!response.ok) {
+        console.warn(
+          "⚠️ Backend server not responding, delaying socket connection"
+        );
+        setConnectionError("Backend server not ready");
+        return;
+      }
+      console.log("✅ Backend health check passed");
+    } catch (error) {
+      console.warn("⚠️ Backend health check failed:", error.message);
+      setConnectionError("Backend server unreachable");
+      return;
+    }
+
     const socketInstance = io(backendUrl, {
       withCredentials: true,
-      transports: ["websocket", "polling"], // Allow fallback to polling
-      timeout: 20000, // 20 second timeout (increased)
+      transports: ["polling", "websocket"], // Try polling first (more reliable)
+      timeout: 30000, // 30 second timeout (even more time)
       autoConnect: false, // Don't auto-connect immediately
       reconnection: true,
       reconnectionAttempts: 3, // Reduced attempts
-      reconnectionDelay: 2000, // Increased delay
-      reconnectionDelayMax: 5000,
-      maxReconnectionAttempts: 3,
+      reconnectionDelay: 3000, // 3 second delay
+      reconnectionDelayMax: 10000, // Max 10 seconds
+      forceNew: false, // Explicitly set to false
+      upgrade: true, // Allow transport upgrades
     });
 
     // Connection success
@@ -140,13 +158,26 @@ export const SocketProvider = ({ children }) => {
   // Effect to handle socket connection
   useEffect(() => {
     let socketInstance = null;
+    let isCancelled = false;
 
-    if (backendUrl) {
-      socketInstance = connectSocket();
-    }
+    const initializeSocket = async () => {
+      if (backendUrl && !isCancelled) {
+        try {
+          socketInstance = await connectSocket();
+        } catch (error) {
+          console.error("❌ Failed to initialize socket:", error);
+          if (!isCancelled) {
+            setConnectionError(error.message);
+          }
+        }
+      }
+    };
+
+    initializeSocket();
 
     // Cleanup function
     return () => {
+      isCancelled = true;
       if (socketInstance) {
         console.log("🧹 Cleaning up socket connection");
         socketInstance.removeAllListeners();

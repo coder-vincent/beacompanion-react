@@ -10,7 +10,14 @@ export const AppContextProvider = (props) => {
   axios.defaults.withCredentials = true;
 
   const backendUrl =
-    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+    import.meta.env.VITE_BACKEND_URL ||
+    (window.location.hostname === "localhost"
+      ? "http://localhost:4000"
+      : "https://beacompanion-react.onrender.com");
+
+  // Debug log to check what URL is being used
+  console.log("🌐 Backend URL configured as:", backendUrl);
+  console.log("🌐 VITE_BACKEND_URL env var:", import.meta.env.VITE_BACKEND_URL);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(false);
 
