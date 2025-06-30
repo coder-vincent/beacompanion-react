@@ -26,13 +26,6 @@ const mlDataMiddleware = express.json({
   },
 });
 
-// ML Analysis Routes (with authentication and large payload support)
-mlRouter.post("/analyze", userAuth, mlDataMiddleware, analyzeBehavior);
-mlRouter.get("/status", userAuth, getModelStatus);
-mlRouter.post("/batch", userAuth, mlDataMiddleware, batchAnalysis);
-mlRouter.post("/evaluate", userAuth, mlDataMiddleware, evaluateDataset);
-mlRouter.get("/test", testModels); // No auth required for testing
-
 // Simple health check that doesn't require Python
 mlRouter.get("/health", (req, res) => {
   res.json({
@@ -42,5 +35,12 @@ mlRouter.get("/health", (req, res) => {
     message: "ML service is running",
   });
 });
+
+// ML Analysis Routes (with authentication and large payload support)
+mlRouter.post("/analyze", userAuth, mlDataMiddleware, analyzeBehavior);
+mlRouter.get("/status", userAuth, getModelStatus);
+mlRouter.post("/batch", userAuth, mlDataMiddleware, batchAnalysis);
+mlRouter.post("/evaluate", userAuth, mlDataMiddleware, evaluateDataset);
+mlRouter.get("/test", testModels); // No auth required for testing
 
 export default mlRouter;
