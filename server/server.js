@@ -20,7 +20,7 @@ const frontendOrigin = process.env.CLIENT_URL || "http://localhost:5173";
 
 const io = new Server(httpServer, {
   cors: {
-    origin: (origin, callback) => callback(null, true),
+    origin: frontendOrigin,
     credentials: true,
   },
 });
@@ -47,7 +47,7 @@ const initializeServer = async () => {
 };
 
 const corsOptions = {
-  origin: (origin, callback) => callback(null, true),
+  origin: frontendOrigin,
   credentials: true,
 };
 
