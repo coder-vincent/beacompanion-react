@@ -5,6 +5,7 @@ import {
   getModelStatus,
   batchAnalysis,
   evaluateDataset,
+  testModels,
 } from "../controllers/mlController.js";
 
 const mlRouter = express.Router();
@@ -30,5 +31,6 @@ mlRouter.post("/analyze", userAuth, mlDataMiddleware, analyzeBehavior);
 mlRouter.get("/status", userAuth, getModelStatus);
 mlRouter.post("/batch", userAuth, mlDataMiddleware, batchAnalysis);
 mlRouter.post("/evaluate", userAuth, mlDataMiddleware, evaluateDataset);
+mlRouter.get("/test", testModels); // No auth required for testing
 
 export default mlRouter;

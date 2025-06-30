@@ -7,6 +7,84 @@ import os from "os";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ML Model Test Controller
+export const testModels = async (req, res) => {
+  try {
+    const pythonScript = path.join(
+      __dirname,
+      "../../machine-learning/utils/simple_test.py"
+    );
+    const workingDir = path.join(__dirname, "../../machine-learning");
+
+    console.log("🧪 Testing ML models...");
+    console.log("- Script:", pythonScript);
+    console.log("- Working Dir:", workingDir);
+
+    const pythonProcess = spawn("python", [pythonScript], {
+      cwd: workingDir,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    let result = "";
+    let error = "";
+
+    pythonProcess.stdout.on("data", (data) => {
+      result += data.toString();
+    });
+
+    pythonProcess.stderr.on("data", (data) => {
+      error += data.toString();
+      console.log("Python stderr:", data.toString());
+    });
+
+    pythonProcess.on("close", (code) => {
+      console.log(`Python test process exited with code: ${code}`);
+      console.log(`Test result: "${result}"`);
+
+      if (code !== 0) {
+        console.error("Model test failed:", error);
+        return res.status(500).json({
+          success: false,
+          message: "ML model test failed",
+          error: error,
+        });
+      }
+
+      try {
+        const testResults = JSON.parse(result);
+        res.json({
+          success: true,
+          message: "ML models tested successfully",
+          test_results: testResults,
+        });
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        res.status(500).json({
+          success: false,
+          message: "Failed to parse test results",
+          error: parseError.message,
+        });
+      }
+    });
+
+    // Set timeout for test
+    setTimeout(() => {
+      pythonProcess.kill("SIGTERM");
+      res.status(408).json({
+        success: false,
+        message: "Model test timed out",
+      });
+    }, 30000); // 30 seconds
+  } catch (error) {
+    console.error("Model test error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Model test failed",
+      error: error.message,
+    });
+  }
+};
+
 // ML Analysis Controller
 export const analyzeBehavior = async (req, res) => {
   try {

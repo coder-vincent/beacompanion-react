@@ -57,11 +57,13 @@ _IMAGE_TF = transforms.Compose([
     transforms.ToTensor(),  # outputs [0,1] float32
 ])
 
-# Mediapipe FaceMesh for eye region extraction
+# Mediapipe FaceMesh for eye region extraction (more lenient settings)
 _mp_face_mesh = mp.solutions.face_mesh.FaceMesh(
     static_image_mode=True,
     max_num_faces=1,
     refine_landmarks=False,
+    min_detection_confidence=0.3,  # Lower from default 0.5
+    min_tracking_confidence=0.3,   # Lower from default 0.5
 )
 
 # Landmarks indices around both eyes (approx.)
@@ -70,9 +72,19 @@ _EYE_IDXS = [
     362, 398, 384, 385, 386, 387, 388, 466, 263, 249, 390, 373, 374, 380
 ]
 
-# MediaPipe Hands and Pose instances
-_mp_hands = mp.solutions.hands.Hands(static_image_mode=True, max_num_hands=2)
-_mp_pose = mp.solutions.pose.Pose(static_image_mode=True)
+# MediaPipe Hands and Pose instances (more lenient settings)
+_mp_hands = mp.solutions.hands.Hands(
+    static_image_mode=True, 
+    max_num_hands=2,
+    min_detection_confidence=0.3,  # Lower from default 0.5
+    min_tracking_confidence=0.3    # Lower from default 0.5
+)
+_mp_pose = mp.solutions.pose.Pose(
+    static_image_mode=True,
+    min_detection_confidence=0.3,  # Lower from default 0.5
+    min_tracking_confidence=0.3,   # Lower from default 0.5
+    model_complexity=1             # Use lighter model for better performance
+)
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +128,7 @@ def _eye_crop(img: Image.Image) -> Image.Image | None:
     rgb = np.array(img)  # PIL to numpy RGB
     results = _mp_face_mesh.process(rgb)
     if not results.multi_face_landmarks:
+        print(f"No face detected in frame (size: {img.size})", file=sys.stderr)
         return None
 
     h, w, _ = rgb.shape
@@ -144,6 +157,7 @@ def _hand_crop(img: Image.Image) -> Image.Image | None:
     rgb = np.array(img)
     results = _mp_hands.process(rgb)
     if not results.multi_hand_landmarks:
+        print(f"No hands detected in frame (size: {img.size})", file=sys.stderr)
         return None
 
     h, w, _ = rgb.shape
@@ -168,6 +182,7 @@ def _foot_crop(img: Image.Image) -> Image.Image | None:
     rgb = np.array(img)
     results = _mp_pose.process(rgb)
     if not results.pose_landmarks:
+        print(f"No pose detected in frame (size: {img.size})", file=sys.stderr)
         return None
 
     h, w, _ = rgb.shape
@@ -190,6 +205,7 @@ def _pose_xy(img: Image.Image) -> List[float] | None:
     rgb = np.array(img)
     res = _mp_pose.process(rgb)
     if not res.pose_landmarks:
+        print(f"No pose landmarks detected in frame (size: {img.size})", file=sys.stderr)
         return None
     h, w, _ = rgb.shape
     coords = []
@@ -223,8 +239,9 @@ def _predict(behavior: str, data: Any) -> Dict[str, Any]:
                 except Exception:
                     continue
 
-            if len(crops) < 3:  # need at least a few frames
-                return {"detected": False, "confidence": 0.0, "error": "insufficient_eye_frames"}
+            print(f"Eye detection: {len(crops)} valid crops from {len(frames)} frames", file=sys.stderr)
+            if len(crops) < 1:  # reduce requirement from 3 to 1
+                return {"detected": False, "confidence": 0.0, "error": f"insufficient_eye_frames_got_{len(crops)}"}
 
             frames_tensor = torch.stack(crops, dim=0).unsqueeze(0).to(DEVICE)  # (1, T, C, H, W)
             logits = model(frames_tensor)  # shape (1, 5)
@@ -257,8 +274,10 @@ def _predict(behavior: str, data: Any) -> Dict[str, Any]:
                 except Exception:
                     continue
 
-            if len(crops) < 3:
-                return {"detected": False, "confidence": 0.0, "error": "insufficient_tapping_frames"}
+            crop_type = "hand" if behavior == "tapping_hands" else "foot"
+            print(f"{crop_type.title()} detection: {len(crops)} valid crops from {len(frames)} frames", file=sys.stderr)
+            if len(crops) < 1:  # reduce requirement from 3 to 1
+                return {"detected": False, "confidence": 0.0, "error": f"insufficient_{crop_type}_frames_got_{len(crops)}"}
 
             frames_tensor = torch.stack(crops, dim=0).unsqueeze(0).to(DEVICE)
             logits = model(frames_tensor)
@@ -277,8 +296,9 @@ def _predict(behavior: str, data: Any) -> Dict[str, Any]:
                             seq.append(coords)
                     except Exception:
                         continue
-                if len(seq) < 3:
-                    return {"detected": False, "confidence": 0.0, "error": "insufficient_pose_frames"}
+                print(f"Pose detection: {len(seq)} valid poses from {len(data)} frames", file=sys.stderr)
+                if len(seq) < 1:  # reduce requirement from 3 to 1
+                    return {"detected": False, "confidence": 0.0, "error": f"insufficient_pose_frames_got_{len(seq)}"}
             else:
                 seq = data if isinstance(data, list) else data.get(behavior) or []
 
@@ -298,7 +318,9 @@ def _predict(behavior: str, data: Any) -> Dict[str, Any]:
             prob = 0.0
 
         prob = float(max(0.0, min(1.0, prob)))  # clamp to [0,1]
-        return {"detected": prob > 0.5, "confidence": round(prob, 4)}
+        print(f"Model prediction for {behavior}: confidence={prob:.4f}", file=sys.stderr)
+        # Lower threshold from 0.5 to 0.3 for better detection
+        return {"detected": prob > 0.3, "confidence": round(prob, 4)}
 
     except Exception as exc:
         # Fall back gracefully
