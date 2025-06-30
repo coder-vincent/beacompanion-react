@@ -54,9 +54,6 @@ const corsOptions = {
 app.use(cookieParser());
 app.use(cors(corsOptions));
 
-// Handle preflight requests for all routes
-app.options("*", cors(corsOptions));
-
 // Increase JSON body parser limit for large ML data
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
