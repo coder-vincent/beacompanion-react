@@ -9,7 +9,9 @@ from flask_cors import CORS
 import os
 import json
 import tempfile
-from utils.ml_analyzer import analyze_behavior
+from utils.ml_analyzer import _predict
+import subprocess
+import sys
 
 app = Flask(__name__)
 CORS(app)
@@ -44,8 +46,12 @@ def analyze():
             temp_file = f.name
         
         try:
-            # Call the ML analysis function directly
-            result = analyze_behavior(temp_file, behavior_type)
+            # Read the temp file and call the ML prediction function
+            with open(temp_file, 'r') as f:
+                data_dict = json.load(f)
+            
+            behavior_data = data_dict.get(behavior_type, payload)
+            result = _predict(behavior_type, behavior_data)
             
             return jsonify({
                 "success": True,
