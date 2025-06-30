@@ -7,6 +7,7 @@ This script is called by the Node.js test endpoint to verify Python environment.
 import sys
 import json
 import time
+import os
 
 def main():
     """Quick test of the ML environment - should complete in under 10 seconds"""
@@ -35,7 +36,8 @@ def main():
             import mediapipe as mp
             print("✓ MediaPipe available", file=sys.stderr)
         except ImportError:
-            print("⚠ MediaPipe not available", file=sys.stderr)
+            if os.getenv('DEBUG', '').lower() in ('true', '1', 'yes'):
+                print("⚠ MediaPipe not available", file=sys.stderr)
         
         # Test 4: Quick PyTorch tensor operation
         print("Testing PyTorch operations...", file=sys.stderr)

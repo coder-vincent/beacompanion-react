@@ -42,11 +42,18 @@ with contextlib.redirect_stdout(_silent):
 
 # For eye gaze preprocessing
 import numpy as np
+
+# Debug mode - only show warnings if DEBUG environment variable is set
+DEBUG = os.getenv('DEBUG', '').lower() in ('true', '1', 'yes')
+
 try:
     import mediapipe as mp
+    MEDIAPIPE_AVAILABLE = True
 except ImportError:
-    print("Warning: MediaPipe not available", file=sys.stderr)
+    if DEBUG:
+        print("Warning: MediaPipe not available", file=sys.stderr)
     mp = None
+    MEDIAPIPE_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Globals
@@ -166,7 +173,8 @@ def _eye_crop(img: Image.Image) -> Optional[Image.Image]:
     
     mp_face_mesh, _, _ = get_mediapipe_models()
     if mp_face_mesh is None:
-        print("MediaPipe not available for eye crop", file=sys.stderr)
+        if DEBUG:
+            print("MediaPipe not available for eye crop", file=sys.stderr)
         return None
 
     rgb = np.array(img)  # PIL to numpy RGB
@@ -200,7 +208,8 @@ def _hand_crop(img: Image.Image) -> Optional[Image.Image]:
 
     _, mp_hands, _ = get_mediapipe_models()
     if mp_hands is None:
-        print("MediaPipe not available for hand crop", file=sys.stderr)
+        if DEBUG:
+            print("MediaPipe not available for hand crop", file=sys.stderr)
         return None
 
     rgb = np.array(img)
@@ -230,7 +239,8 @@ def _foot_crop(img: Image.Image) -> Optional[Image.Image]:
 
     _, _, mp_pose = get_mediapipe_models()
     if mp_pose is None:
-        print("MediaPipe not available for foot crop", file=sys.stderr)
+        if DEBUG:
+            print("MediaPipe not available for foot crop", file=sys.stderr)
         return None
 
     rgb = np.array(img)
@@ -259,7 +269,8 @@ def _pose_xy(img: Image.Image) -> Optional[List[float]]:
 
     _, _, mp_pose = get_mediapipe_models()
     if mp_pose is None:
-        print("MediaPipe not available for pose", file=sys.stderr)
+        if DEBUG:
+            print("MediaPipe not available for pose", file=sys.stderr)
         return None
 
     rgb = np.array(img)
