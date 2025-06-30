@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { AppContext } from "../context/AppContext";
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 
 const MLAnalysis = () => {
+  const { backendUrl } = useContext(AppContext);
   const [behaviorType, setBehaviorType] = useState("");
   const [inputData, setInputData] = useState("");
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -71,7 +73,7 @@ const MLAnalysis = () => {
 
   const checkModelStatus = async () => {
     try {
-      const response = await fetch("/api/ml/status", {
+      const response = await fetch(`${backendUrl}/api/ml/status`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -112,7 +114,7 @@ const MLAnalysis = () => {
         return;
       }
 
-      const response = await fetch("/api/ml/analyze", {
+      const response = await fetch(`${backendUrl}/api/ml/analyze`, {
         method: "POST",
         credentials: "include",
         headers: {

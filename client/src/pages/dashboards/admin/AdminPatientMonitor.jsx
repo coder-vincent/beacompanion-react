@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { AppContext } from "../../../context/AppContext";
 import {
   Card,
   CardContent,
@@ -30,6 +31,7 @@ import {
 import PatientMonitor from "../../components/PatientMonitor";
 
 const AdminPatientMonitor = () => {
+  const { backendUrl } = useContext(AppContext);
   const [activeSessions, setActiveSessions] = useState([]);
   const [sessionStats, setSessionStats] = useState({});
   const [error, setError] = useState("");
@@ -41,7 +43,7 @@ const AdminPatientMonitor = () => {
 
   const fetchActiveSessions = async () => {
     try {
-      const response = await fetch("/api/session", {
+      const response = await fetch(`${backendUrl}/api/session`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -62,7 +64,7 @@ const AdminPatientMonitor = () => {
   const fetchSessionStats = async () => {
     try {
       // This would be a new endpoint for session statistics
-      const response = await fetch("/api/session/stats", {
+      const response = await fetch(`${backendUrl}/api/session/stats`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -79,11 +81,14 @@ const AdminPatientMonitor = () => {
 
   const exportSessionData = async (sessionId) => {
     try {
-      const response = await fetch(`/api/session/${sessionId}/export`, {
-        method: "GET",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `${backendUrl}/api/session/${sessionId}/export`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       if (response.ok) {
         const blob = await response.blob();

@@ -19,7 +19,12 @@ const sequelize = new Sequelize(
     dialect: "mysql",
     dialectOptions:
       process.env.DB_SSL === "true"
-        ? { ssl: { require: true, rejectUnauthorized: true } }
+        ? {
+            ssl: {
+              require: true,
+              rejectUnauthorized: false, // Changed for compatibility with some hosting providers
+            },
+          }
         : {},
   }
 );
@@ -37,10 +42,17 @@ console.error(
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log("Database connected.");
+    console.log("Database connected successfully.");
     return sequelize;
   } catch (err) {
-    console.error("Database connection failed:", err);
+    console.error("Database connection failed:");
+    console.error("Error details:", err.message);
+    console.error("Connection config:");
+    console.error("- Host:", process.env.DB_HOST);
+    console.error("- Port:", process.env.DB_PORT || 3306);
+    console.error("- Database:", process.env.DB_DATABASE);
+    console.error("- User:", process.env.DB_USER);
+    console.error("- SSL:", process.env.DB_SSL);
     throw err;
   }
 };

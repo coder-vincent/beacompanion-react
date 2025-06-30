@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { AppContext } from "../context/AppContext";
 import {
   Card,
   CardContent,
@@ -34,6 +35,7 @@ import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 
 const PatientMonitor = () => {
+  const { backendUrl } = useContext(AppContext);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [behaviorData, setBehaviorData] = useState({});
@@ -84,7 +86,7 @@ const PatientMonitor = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await fetch("/api/user/all", {
+      const response = await fetch(`${backendUrl}/api/user/all`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -123,7 +125,7 @@ const PatientMonitor = () => {
         status: "active",
       };
 
-      const response = await fetch("/api/ml/session", {
+      const response = await fetch(`${backendUrl}/api/ml/session`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -181,11 +183,14 @@ const PatientMonitor = () => {
       }
 
       // End session
-      const response = await fetch(`/api/ml/session/${currentSession.id}/end`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `${backendUrl}/api/ml/session/${currentSession.id}/end`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       if (response.ok) {
         const endedSession = await response.json();
@@ -294,7 +299,7 @@ const PatientMonitor = () => {
         JSON.parse(JSON.stringify(readyBehaviors))
       );
 
-      const response = await fetch("/api/ml/batch", {
+      const response = await fetch(`${backendUrl}/api/ml/batch`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
