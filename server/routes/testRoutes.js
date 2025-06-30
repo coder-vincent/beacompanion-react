@@ -61,4 +61,52 @@ testRouter.get("/env-test", (req, res) => {
   });
 });
 
+// Test cookies and headers
+testRouter.get("/cookie-test", (req, res) => {
+  res.json({
+    success: true,
+    request: {
+      origin: req.headers.origin,
+      userAgent: req.headers["user-agent"],
+      cookie: req.headers.cookie,
+      authorization: req.headers.authorization,
+      referer: req.headers.referer,
+      host: req.headers.host,
+    },
+    cookies: req.cookies,
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      CLIENT_URL: process.env.CLIENT_URL,
+    },
+  });
+});
+
+// Test authentication with detailed logging
+testRouter.get("/auth-test", async (req, res) => {
+  try {
+    const token =
+      req.cookies?.token || req.headers.authorization?.split(" ")[1];
+
+    res.json({
+      success: true,
+      authentication: {
+        tokenPresent: !!token,
+        tokenSource: req.cookies?.token
+          ? "cookie"
+          : req.headers.authorization
+          ? "header"
+          : "none",
+        cookieHeader: req.headers.cookie,
+        authHeader: req.headers.authorization,
+        origin: req.headers.origin,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default testRouter;

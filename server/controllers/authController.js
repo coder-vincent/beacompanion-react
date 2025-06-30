@@ -43,12 +43,17 @@ export const register = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.cookie("token", token, {
+    // Enhanced cookie settings for cross-domain (registration)
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      path: "/",
+    };
+
+    res.cookie("token", token, cookieOptions);
+    console.log("🍪 Registration cookie set with options:", cookieOptions);
 
     // Send email if SMTP is configured
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -131,13 +136,17 @@ export const login = async (req, res) => {
       expiresAt,
     });
 
-    res.cookie("token", token, {
+    // Enhanced cookie settings for cross-domain (login)
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+      path: "/",
+    };
 
+    res.cookie("token", token, cookieOptions);
+    console.log("🍪 Login cookie set with options:", cookieOptions);
     console.log("✅ Login successful for user:", email, "Role:", user.role);
     return res.json({ success: true, role: user.role, token });
   } catch (err) {
@@ -175,8 +184,11 @@ export const logout = async (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     });
+
+    console.log("🧹 Cookie cleared for logout");
 
     return res.json({ success: true, message: "Logout Successfully" });
   } catch (err) {
@@ -264,8 +276,31 @@ export const verifyEmail = async (req, res) => {
 
 export const isAuthenticated = async (req, res) => {
   try {
-    return res.json({ success: true });
+    // If we reach here, the userAuth middleware has already validated the token
+    // req.user contains the user ID from the JWT token
+    const { id } = req.user;
+
+    // Get user data from database to return current info
+    const user = await userModel.findByPk(id);
+
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    console.log("✅ Authentication check successful for user:", user.email);
+
+    return res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAccountVerified: user.isAccountVerified,
+      },
+    });
   } catch (err) {
+    console.error("❌ Authentication check failed:", err);
     res.json({ success: false, message: err.message });
   }
 };

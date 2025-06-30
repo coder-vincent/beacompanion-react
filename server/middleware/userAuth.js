@@ -15,19 +15,41 @@ const userAuth = async (req, res, next) => {
     token = req.headers.authorization.split(" ")[1];
   }
 
+  console.log("🔐 Auth middleware - Token present:", token ? "Yes" : "No");
+  console.log(
+    "🔐 Auth middleware - Cookie token:",
+    req.cookies?.token ? "Present" : "Missing"
+  );
+  console.log("🔐 Auth middleware - Headers:", {
+    origin: req.headers.origin,
+    cookie: req.headers.cookie ? "Present" : "Missing",
+    authorization: req.headers.authorization ? "Present" : "Missing",
+  });
+
   if (!token) {
+    console.log("❌ No token found in cookies or headers");
     return res.json({
       success: false,
       message: "Not authorized, login again.",
+      details:
+        process.env.NODE_ENV === "development"
+          ? {
+              cookieReceived: !!req.cookies?.token,
+              authHeaderReceived: !!req.headers.authorization,
+              origin: req.headers.origin,
+            }
+          : undefined,
     });
   }
 
   try {
     const tokenDecode = jwt.verify(token, getJwtSecret());
+    console.log("✅ Token decoded successfully for user ID:", tokenDecode.id);
 
     if (tokenDecode.id) {
       req.user = { id: tokenDecode.id };
     } else {
+      console.log("❌ No user ID in token");
       return res.json({
         success: false,
         message: "Not authorized, login again.",
@@ -36,8 +58,26 @@ const userAuth = async (req, res, next) => {
 
     next();
   } catch (err) {
-    console.error("Authentication error:", err);
-    res.json({ success: false, message: "Not authorized, login again." });
+    console.error("❌ Authentication error:", err.message);
+
+    let errorMessage = "Not authorized, login again.";
+    if (err.name === "TokenExpiredError") {
+      errorMessage = "Session expired, please login again.";
+    } else if (err.name === "JsonWebTokenError") {
+      errorMessage = "Invalid token, please login again.";
+    }
+
+    res.json({
+      success: false,
+      message: errorMessage,
+      details:
+        process.env.NODE_ENV === "development"
+          ? {
+              error: err.message,
+              name: err.name,
+            }
+          : undefined,
+    });
   }
 };
 
